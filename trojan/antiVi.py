@@ -5,11 +5,10 @@ class AtarBalsAntivirus:
     def __init__(self, root):
 
         self.root = root
-        self.root.title("AtarBals Morden Antivirus")
+        self.root.title("MAntivirus")
         self.root.geometry("1100x700")
         self.root.minsize(900, 550)
         self.root.configure(bg="#f4f7fc")
-        self.root.iconphoto(True, tk.PhotoImage(file="./src/icon.png"))
 
         # Configure main grid
         self.root.columnconfigure(0, minsize=240)
@@ -37,7 +36,7 @@ class AtarBalsAntivirus:
     def build_sidebar(self):
         tk.Label(
             self.sidebar,
-            text="AntiVirus",
+            text="M AntiVirus",
             font=("Segoe UI", 16, "bold"),
             bg="#2d5be3",
             fg="white",
@@ -219,7 +218,7 @@ class AtarBalsAntivirus:
         else:
             messagebox.showwarning("License", "Please enter a valid license key!")
 
-if __name__ == "__main__":
+def start_application():
     root = tk.Tk()
     app = AtarBalsAntivirus(root)
     root.mainloop()

