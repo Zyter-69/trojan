@@ -213,6 +213,3 @@ def jeu():
                     pygame.quit()
                     sys.exit()
 
-
-# Lancement
-jeu()

