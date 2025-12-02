@@ -112,7 +112,7 @@ def jeu():
         if snake_x == food_x and snake_y == food_y:
             longueur += 1
             score += 1
-            vitesse += 0.3
+            vitesse += 0.2
 
             # Nouvelle nourriture
             food_x = random.randrange(0, largeur, taille_bloc)
@@ -124,35 +124,60 @@ def jeu():
         # ----- AFFICHAGE -----
         fenetre.blit(background, (0, 0))
 
-        # POMME STYLE RONDE
-        pygame.draw.circle(fenetre, (220, 0, 0),
-                            (food_x + taille_bloc // 2, food_y + taille_bloc // 2),
+        
+        # Ombre de la pomme
+        pygame.draw.circle(fenetre, (80, 0, 0),
+                            (food_x + taille_bloc//2 + 3,
+                             food_y + taille_bloc//2 + 3),
                             taille_bloc // 2)
 
-        # Petite feuille verte
-        pygame.draw.circle(fenetre, (0, 200, 0),
-                            (food_x + 12, food_y + 4), 4)
+        # Corps de la pomme
+        pygame.draw.circle(fenetre, (220, 0, 0),
+                            (food_x + taille_bloc//2,
+                             food_y + taille_bloc//2),
+                            taille_bloc // 2)
+
+        # Reflet brillant
+        pygame.draw.circle(fenetre, (255, 150, 150),
+                            (food_x + 7, food_y + 7), 5)
+
+        # Feuille verte
+        pygame.draw.ellipse(fenetre, (0, 180, 0),
+                             (food_x + 10, food_y - 2, 10, 6))
+
 
 
 
         for i, bloc in enumerate(snake):
             x, y = bloc
+            centre = (x + taille_bloc // 2, y + taille_bloc // 2)
+            rayon = taille_bloc // 2
+        
+            # Ombre
+            pygame.draw.circle(fenetre, (0, 80, 0),
+                                (centre[0] + 2, centre[1] + 2),
+                                rayon)
+        
+            # Couleur dégradée (corps)
+            couleur_corps = (0, 180 - i*3, 0)
+        
             if i == len(snake) - 1:
-                # TÊTE DU SERPENT
-                pygame.draw.circle(fenetre, (35, 5, 229),
-                                    (x + taille_bloc // 2, y + taille_bloc // 2),
-                                    taille_bloc // 2)
-
+                # ------ TÊTE ------
+                pygame.draw.circle(fenetre, (0, 220, 0), centre, rayon)
+        
+                # Reflet (brillance)
+                pygame.draw.circle(fenetre, (120, 255, 120),
+                                   (centre[0] - 4, centre[1] - 4), 5)
+        
                 # YEUX
                 pygame.draw.circle(fenetre, (0, 0, 0),
-                                    (x + 6, y + 6), 3)
+                                   (centre[0] - 5, centre[1] - 4), 3)
                 pygame.draw.circle(fenetre, (0, 0, 0),
-                                    (x + 14, y + 6), 3)
+                                   (centre[0] + 5, centre[1] - 4), 3)
+        
             else:
-                # CORPS DU SERPENT
-                pygame.draw.circle(fenetre, (35, 5, 229),
-                                    (x + taille_bloc // 2, y + taille_bloc // 2),
-                                    taille_bloc // 2)
+                # ------ CORPS ------
+                pygame.draw.circle(fenetre, couleur_corps, centre, rayon)
 
         # Affichage Score
         fenetre.blit(font.render(f"Score : {score}", True, GOLD), (10, 10))

