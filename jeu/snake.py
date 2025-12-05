@@ -61,6 +61,13 @@ def jeu():
     food_x = random.randrange(0, largeur, taille_bloc)
     food_y = random.randrange(0, hauteur, taille_bloc)
 
+    # ----- BOMBE -----
+    bomb_x = random.randrange(0, largeur, taille_bloc)
+    bomb_y = random.randrange(0, hauteur, taille_bloc)
+
+
+
+
     score = 0
     vitesse = 10
 
@@ -117,14 +124,28 @@ def jeu():
             # Nouvelle nourriture
             food_x = random.randrange(0, largeur, taille_bloc)
             food_y = random.randrange(0, hauteur, taille_bloc)
+        
+        # 💣 Manger une BOMBE
+        if snake_x == bomb_x and snake_y == bomb_y:
+            longueur -= 2  # le snake rétrécit
+            vitesse = max(8, vitesse - 2)  # on ralentit un peu
+            bomb_x = random.randrange(0, largeur, taille_bloc)
+            bomb_y = random.randrange(0, hauteur, taille_bloc)
+
+            # Replacer le bonus ailleurs
+            bonus_x = random.randrange(0, largeur, taille_bloc)
+            bonus_y = random.randrange(0, hauteur, taille_bloc)
+
+        if longueur <= 2:
+            game_over = True
         else:
-            if len(snake) > longueur:
+            while len(snake) > longueur:
                 del snake[0]
+
 
         # ----- AFFICHAGE -----
         fenetre.blit(background, (0, 0))
 
-        
         # Ombre de la pomme
         pygame.draw.circle(fenetre, (80, 0, 0),
                             (food_x + taille_bloc//2 + 3,
@@ -144,8 +165,35 @@ def jeu():
         # Feuille verte
         pygame.draw.ellipse(fenetre, (0, 180, 0),
                              (food_x + 10, food_y - 2, 10, 6))
+        
+        # ===== BOMBE STYLE PRO =====
 
+        # Ombre
+        pygame.draw.circle(fenetre, (30, 30, 30),
+                            (bomb_x + taille_bloc//2 + 3,
+                             bomb_y + taille_bloc//2 + 3),
+                            taille_bloc//2)
 
+        # Corps de la bombe (NOIR)
+        pygame.draw.circle(fenetre, (0, 0, 0),
+                            (bomb_x + taille_bloc//2,
+                             bomb_y + taille_bloc//2),
+                            taille_bloc//2)
+
+        # Reflet (effet brillant)
+        pygame.draw.circle(fenetre, (80, 80, 80),
+                            (bomb_x + 6, bomb_y + 6), 5)
+
+        # Mèche de la bombe
+        pygame.draw.line(fenetre, (120, 120, 120),
+                         (bomb_x + taille_bloc//2, bomb_y),
+                         (bomb_x + taille_bloc//2 - 6, bomb_y - 10), 3)
+
+        # Étincelle (effet feu)
+        pygame.draw.circle(fenetre, (255, 200, 0),
+                            (bomb_x + taille_bloc//2 - 7, bomb_y - 11), 4)
+        pygame.draw.circle(fenetre, (255, 80, 0),
+                            (bomb_x + taille_bloc//2 - 7, bomb_y - 11), 2)
 
 
         for i, bloc in enumerate(snake):
